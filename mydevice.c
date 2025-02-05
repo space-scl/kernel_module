@@ -4,6 +4,7 @@
 #include <linux/device.h>
 #include <linux/uaccess.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 
 #define DEVICE_NAME "mydevice"
 #define CLASS_NAME "myclass"
@@ -68,7 +69,7 @@ static int __init mydevice_init(void) {
     printk(KERN_INFO "Allocated major number: %d\n", major_number);
 
     // 创建设备类
-    myclass = class_create(THIS_MODULE, CLASS_NAME);
+    myclass = class_create(CLASS_NAME);
     if (IS_ERR(myclass)) {
         unregister_chrdev_region(dev, 1);
         printk(KERN_ERR "Failed to create device class\n");
