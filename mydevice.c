@@ -42,7 +42,23 @@ static ssize_t device_read(struct file *file, char __user *buffer, size_t length
 
 // 设备文件的写操作
 static ssize_t device_write(struct file *file, const char __user *buffer, size_t length, loff_t *offset) {
-    printk(KERN_INFO "Received data from user: %s\n", buffer);
+    char *kernel_buffer;
+
+    // 分配内核缓冲区
+    kernel_buffer = kmalloc(length, GFP_KERNEL);
+    if (!kernel_buffer)
+        return -ENOMEM;
+
+    // 从用户空间复制数据
+    if (copy_from_user(kernel_buffer, buffer, length)) {
+        kfree(kernel_buffer);
+        return -EFAULT;
+    }
+
+    printk(KERN_INFO "Received data from user: %s\n", kernel_buffer);
+
+    // 释放内核缓冲区
+    kfree(kernel_buffer);
     return length;
 }
 
