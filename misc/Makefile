@@ -1,4 +1,4 @@
-obj-m += mydevice.o
+obj-m += misc.o
 
 org := /lib/modules/$(shell uname -r)/build
 x86_mod := /home/scl/learning/linux
