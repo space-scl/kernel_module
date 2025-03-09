@@ -28,16 +28,24 @@ static int device_release(struct inode *inode, struct file *file) {
 // 设备文件的读操作
 static ssize_t device_read(struct file *file, char __user *buffer, size_t length, loff_t *offset) {
     char *message = "Hello from the kernel!\n";
+    printk(KERN_INFO "User want %zu chars\n", length);
     int message_size = strlen(message);
+    int read_size = 0;
 
     if (*offset >= message_size)
         return 0; // EOF
 
-    if (copy_to_user(buffer, message + *offset, message_size - *offset))
+    if (message_size - *offset < length) {
+	read_size = message_size - *offset;
+    } else {
+	read_size = length;
+    }
+
+    if (copy_to_user(buffer, message + *offset, read_size))
         return -EFAULT;
 
-    *offset += message_size - *offset;
-    return message_size - *offset;
+    *offset += read_size;
+    return read_size;
 }
 
 // 设备文件的写操作

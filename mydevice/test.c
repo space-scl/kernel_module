@@ -5,7 +5,8 @@
 
 int main() {
     int fd;
-    char buffer[100];
+    char buffer[100] = {0};
+    ssize_t ret;
 
     // 打开设备文件
     fd = open("/dev/mydevice", O_RDWR);
@@ -15,11 +16,24 @@ int main() {
     }
 
     // 读取设备数据
-    if (read(fd, buffer, sizeof(buffer)) < 0) {
+    ret = read(fd, buffer, 5);
+    if (ret < 0) {
         perror("Failed to read from device");
         close(fd);
         return -1;
     }
+    printf("Data length from device: %ld\n", ret);
+    printf("Data from device: %s\n", buffer);
+
+    memset (buffer, 0, 100);
+
+    ret = read(fd, buffer, 17);
+    if (ret < 0) {
+        perror("Failed to read from device");
+        close(fd);
+        return -1;
+    }
+    printf("Data length from device: %ld\n", ret);
     printf("Data from device: %s\n", buffer);
 
     // 写入设备数据
