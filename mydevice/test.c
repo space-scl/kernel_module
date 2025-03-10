@@ -27,6 +27,7 @@ int main() {
 
     memset (buffer, 0, 100);
 
+    // 读取设备数据
     ret = read(fd, buffer, 17);
     if (ret < 0) {
         perror("Failed to read from device");

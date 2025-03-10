@@ -13,6 +13,14 @@ static int major_number;
 static struct class *myclass = NULL;
 static struct cdev my_cdev;
 
+static int parameter;
+
+static int array[10];
+static int count;
+
+module_param (parameter, int, 0444);
+module_param_array (array, int, &count, 0444);
+
 // 设备文件的打开操作
 static int device_open(struct inode *inode, struct file *file) {
     printk(KERN_INFO "Device opened\n");
@@ -82,6 +90,14 @@ static struct file_operations fops = {
 // 模块初始化函数
 static int __init mydevice_init(void) {
     dev_t dev;
+    int i;
+
+    printk("parameter from user: %d", parameter);
+    printk("the number of array: %d", count);
+    for (i = 0; i < parameter; i++) {
+        printk("array[%d] from user: %d", i, array[i]);
+    }
+
 
     // 动态分配主设备号
     if (alloc_chrdev_region(&dev, 0, 1, DEVICE_NAME) < 0) {
