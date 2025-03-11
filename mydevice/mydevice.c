@@ -9,16 +9,22 @@
 #define DEVICE_NAME "mydevice"
 #define CLASS_NAME "myclass"
 
-static int major_number;
 static struct class *myclass = NULL;
 static struct cdev my_cdev;
 
 static int parameter;
 
+// user can specify device number when installing module
+// if user does not specify device number explicitly, it will be allocated dynamically
+static int major;
+static int minor;
+
 static int array[10];
 static int count;
 
 module_param (parameter, int, 0444);
+module_param (major, int, 0444);
+module_param (minor, int, 0444);
 module_param_array (array, int, &count, 0444);
 
 // 设备文件的打开操作
@@ -91,6 +97,28 @@ static struct file_operations fops = {
 static int __init mydevice_init(void) {
     dev_t dev;
     int i;
+    int ret;
+
+    printk("major device number from user: %d\n", major);
+    printk("minor device number form user: %d\n", minor);
+
+    // Try to allocate device number from user input
+    // if there is user input, allocate device numbert statically
+    // otherwise, allocate device number dynamically
+    if (major != 0) {
+        dev = MKDEV(major, minor);
+        ret = register_chrdev_region(dev, 1, DEVICE_NAME);
+        if (ret != 0) {
+            printk("Fail to allocate device number\n");
+            return -1;
+        }
+    } else {
+        // 动态分配主设备号
+        if (alloc_chrdev_region(&dev, 0, 1, DEVICE_NAME) < 0) {
+            printk(KERN_ERR "Failed to allocate device number\n");
+            return -1;
+        }
+    }
 
     printk("parameter from user: %d", parameter);
     printk("the number of array: %d", count);
@@ -98,15 +126,10 @@ static int __init mydevice_init(void) {
         printk("array[%d] from user: %d", i, array[i]);
     }
 
-
-    // 动态分配主设备号
-    if (alloc_chrdev_region(&dev, 0, 1, DEVICE_NAME) < 0) {
-        printk(KERN_ERR "Failed to allocate device number\n");
-        return -1;
-    }
-
-    major_number = MAJOR(dev);
-    printk(KERN_INFO "Allocated major number: %d\n", major_number);
+    major = MAJOR(dev);
+    minor = MINOR(dev);
+    printk(KERN_INFO "Allocated major number: %d\n", major);
+    printk(KERN_INFO "Allocated minor number: %d\n", minor);
 
     // 创建设备类
     myclass = class_create(CLASS_NAME);
@@ -137,7 +160,7 @@ static int __init mydevice_init(void) {
 
 // 模块退出函数
 static void __exit mydevice_exit(void) {
-    dev_t dev = MKDEV(major_number, 0);
+    dev_t dev = MKDEV(major, minor);
 
     // 销毁设备文件
     device_destroy(myclass, dev);
