@@ -139,6 +139,10 @@ static int __init mydevice_init(void) {
         return PTR_ERR(myclass);
     }
 
+    // 创建设备文件
+    device_create(myclass, NULL, dev, NULL, DEVICE_NAME);
+    printk(KERN_INFO "Device created: /dev/%s\n", DEVICE_NAME);
+
     // 初始化字符设备
     cdev_init(&my_cdev, &fops);
     my_cdev.owner = THIS_MODULE;
@@ -151,9 +155,6 @@ static int __init mydevice_init(void) {
         return -1;
     }
 
-    // 创建设备文件
-    device_create(myclass, NULL, dev, NULL, DEVICE_NAME);
-    printk(KERN_INFO "Device created: /dev/%s\n", DEVICE_NAME);
 
     return 0;
 }

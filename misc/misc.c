@@ -1,7 +1,11 @@
 #include <linux/fs.h>  // file_operations
 //#include <linux/init.h> // THIS_MODULE
 #include <linux/miscdevice.h> // struct miscdevice
-#include <linux/module.h>  //MODULE_LICENSE 
+#include <linux/module.h>  //MODULE_LICENSE
+
+// Misc device major number is 10. And you can specify the minor dynamically
+//
+//
 
 static struct file_operations misc_fops = {
 	.owner = THIS_MODULE
