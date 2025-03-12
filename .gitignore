@@ -1,8 +1,8 @@
-mydevice/*.ko
-mydevice/*.mod*
-mydevice/*.cmd
-mydevice/*.o
-mydevice/*.order
-mydevice/*.symvers
-mydevice/test_mydevice
+*/*.ko
+*/*.mod*
+*/*.cmd
+*/*.o
+*/*.order
+*/*.symvers
+*/test_mydevice
 *.swp
