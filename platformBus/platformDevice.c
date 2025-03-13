@@ -21,7 +21,7 @@ struct resource deviceResource[] = {
 
 struct platform_device myPlatformDevice[] = {
     {
-		.name = "myPlatformDevice",
+		.name = "myPlatformDevice",  // This name is used to match platform driver
 		.id = -1,
 		.num_resources = ARRAY_SIZE(deviceResource),
 		.resource = deviceResource,

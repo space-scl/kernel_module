@@ -26,7 +26,7 @@ static struct device_driver driver = {
 */
 
 const struct platform_device_id test_id_table = {
-	.name = "myPlatformDevice"
+	.name = "myPlatformDevice"  // This name is used to match platform device
 	//.driver_data = 0,
 };
 
@@ -34,8 +34,8 @@ struct platform_driver pDriver =  {
 	.probe = testprobe,
     .remove = testremove,
 	.driver = {
-    	.name = "123",
-		.owner = THIS_MODULE,
+        .name = "123", // This name is also used to match platform device, but has low priority
+        .owner = THIS_MODULE,
     },
 	.id_table = &test_id_table
 };
