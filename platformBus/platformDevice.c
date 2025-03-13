@@ -14,7 +14,7 @@ struct resource deviceResource[] = {
     {
 	    .start = 0x1,
 	    .end = 0x8,
-	    .name = "Beep",
+	    .name = "GPIO_5_DR",
 	    .flags = IORESOURCE_MEM,
 	}
 };
