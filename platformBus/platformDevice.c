@@ -3,6 +3,7 @@
 #include <linux/platform_device.h>
 #include <linux/array_size.h>
 #include <linux/device.h>
+#include <linux/slab.h>
 
 static void releasePlatformDevice (struct device *dev)
 {

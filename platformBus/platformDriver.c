@@ -6,6 +6,9 @@
 #include <linux/mod_devicetable.h>
 #include <linux/cdev.h>
 #include <linux/io.h>
+#include <linux/uaccess.h>
+#include <linux/slab.h>
+#include <linux/fs.h>
 
 
 // Register character device in probe routine for platform bus driver
@@ -144,9 +147,6 @@ static int __init mydevice_init(void) {
         return PTR_ERR(myclass);
     }
 
-    // 创建设备文件
-    device_create(myclass, NULL, dev, NULL, DEVICE_NAME);
-    printk(KERN_INFO "Device created: /dev/%s\n", DEVICE_NAME);
 
     // 初始化字符设备
     cdev_init(&my_cdev, &fops);
@@ -160,6 +160,9 @@ static int __init mydevice_init(void) {
         return -1;
     }
 
+    // 创建设备文件
+    device_create(myclass, NULL, dev, NULL, DEVICE_NAME);
+    printk(KERN_INFO "Device created: /dev/%s\n", DEVICE_NAME);
 
     return 0;
 }
@@ -195,8 +198,8 @@ static int testprobe (struct platform_device * pDev)
 		return -EBUSY;
 	}
 	printk("name of device resource: %s\n", pRsc->name);
-	printk("start of device resource: %llx\n", pRsc->start);
-	printk("end of device resource: %llx\n", pRsc->end);
+	printk("start of device resource: %x\n", pRsc->start);
+	printk("end of device resource: %x\n", pRsc->end);
 
 	ret = mydevice_init();
 
