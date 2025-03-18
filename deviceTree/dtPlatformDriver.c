@@ -10,6 +10,7 @@
 #include <linux/slab.h>
 #include <linux/fs.h>
 #include <linux/of.h>
+#include <linux/of_address.h>
 
 
 // Register character device in probe routine for platform bus driver
@@ -237,6 +238,12 @@ static int testprobe (struct platform_device * pDev)
 	    printk("Fail to init device in probe routine\n");
 	    return -1;
 	}
+	static u32 * virtual_gpio_dr = NULL;
+
+//			reg = <0x10 0x8   // index 0
+//			       0x18 0x8   // index 1
+//			  	  >;
+	virtual_gpio_dr = of_iomap(pNode, 1); // map at 0x18 with 0x8 bytes
 #if 0
     static int __iomem * virMap;
 
