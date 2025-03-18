@@ -191,6 +191,9 @@ static int testprobe (struct platform_device * pDev)
 	struct resource *pRsc = NULL;
 	int ret;
 
+	// Get resource from pDev directly
+	printk("get from platform_device pointor. name of device resource: %s\n", pDev->resource->name);
+
 	// Neet to specify the type of resource and the index of this resource
 	pRsc = platform_get_resource (pDev, IORESOURCE_MEM, 0);
 	if (pRsc == NULL) {

@@ -9,6 +9,7 @@
 #include <linux/uaccess.h>
 #include <linux/slab.h>
 #include <linux/fs.h>
+#include <linux/of.h>
 
 
 // Register character device in probe routine for platform bus driver
@@ -186,20 +187,49 @@ static void __exit mydevice_exit(void) {
 
 #endif
 
+static struct device_node * pNode = NULL;
+static struct property * pProperty = NULL;
+static int len;
+static u32 out_values[2] = {0};
+const char* str;
+
 static int testprobe (struct platform_device * pDev)
 {
-	struct resource *pRsc = NULL;
 	int ret;
 
-	// Neet to specify the type of resource and the index of this resource
-	pRsc = platform_get_resource (pDev, IORESOURCE_MEM, 0);
-	if (pRsc == NULL) {
-        printk("Fail to get resource in probe\n");
-		return -EBUSY;
+	printk("name of device node: %s\n",pDev->dev.of_node->name);
+
+	pNode = of_find_node_by_path("/test");
+
+	if (pNode == NULL) {
+		return -1;
 	}
-	printk("name of device resource: %s\n", pRsc->name);
-	printk("start of device resource: %x\n", pRsc->start);
-	printk("end of device resource: %x\n", pRsc->end);
+	printk("name of device node: %s\n", pNode->name);
+	printk("full name of device node: %s\n", pNode->full_name);
+
+	// Get device node from platform_device
+	pNode = pDev->dev.of_node;
+
+	// get compatible property from device node
+	pProperty = of_find_property(pNode, "compatible", &len);
+	if (pProperty == NULL) {
+		return -1;
+	}
+	printk("name of property: %s\n", pProperty->name);
+	printk("value of property: %s\n", (char*)pProperty->value);
+
+	// get reg property from device node
+    ret = of_property_read_u32_array(pNode, "reg", out_values, 2);
+	if (ret != 0) {
+		return -1;
+	}
+	printk("the values of reg %x, %x", out_values[0], out_values[1]);
+
+	ret = of_property_read_string(pNode, "status", &str);
+	if (ret != 0) {
+		return -1;
+	}
+	printk("the values of status %s", str);
 
 	ret = mydevice_init();
 
@@ -257,14 +287,14 @@ const struct platform_device_id test_id_table = {
 };
 
 const struct of_device_id of_match_table_test[] = {
-	{.compatible = "test1234"}
+	{.compatible = "test1234"} // this name has the highest priority to match device in device tree
 };
 
 struct platform_driver pDriver =  {
 	.probe = testprobe,
     .remove = testremove,
 	.driver = {
-        .name = "123", // This name is also used to match platform device, but has low priority
+        .name = "1234", // This name is also used to match platform device, but has low priority
         .owner = THIS_MODULE,
 		.of_match_table = of_match_table_test,
     },

@@ -13,8 +13,8 @@ static void releasePlatformDevice (struct device *dev)
 
 struct resource deviceResource[] = {
     {
-	    .start = 0x1,
-	    .end = 0x8,
+	    .start = 0x22,
+	    .end = 0x55,
 	    .name = "GPIO_5_DR",
 	    .flags = IORESOURCE_MEM,
 	}
