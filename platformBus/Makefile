@@ -6,6 +6,7 @@ x86_mod := /home/scl/learning/linux
 
 # make ARCH=arm CROSS_COMPILE=arm-linux-gnueabi- vexpress_defconfig
 # make ARCH=arm CROSS_COMPILE=arm-linux-gnueabi- -j$(nproc)
+# make ARCH=arm CROSS_COMPILE=arm-linux-gnueabi- dtbs
 arm_mod := /home/scl/learning/linux
 ARCH ?= arm
 CROSS_COMPILE ?= arm-linux-gnueabi-

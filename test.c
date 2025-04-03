@@ -57,14 +57,9 @@ int main() {
 
 	ret = ioctl (fd, CMD_TEST2);
 	ret = ioctl (fd, CMD_TEST0);
-	// write to device
-	// Since the rouine pass value not address, kernel module do not use copy_from_user
 	ret |= ioctl (fd, CMD_TEST4, val);
-	// read from device
-	// Since the rouine pass address, kernel module must use copy_to_user
 	ret |= ioctl (fd, CMD_TEST3, &val);
 	printf("read from kernel ioctl: %ld\n", val);
-	// pass the value from device back to device
 	ret |= ioctl (fd, CMD_TEST4, val);
 	if (ret == -1) {
 		printf("fail to do ioctl\n");

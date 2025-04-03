@@ -32,6 +32,9 @@ static int minor;
 static int array[10];
 static int count;
 
+// pass parameters when insmod modules
+// insmod <module_name> array=1,2,3
+// cat /sys/module/dtPlatformDriver/parameters/array
 module_param (parameter, int, 0444);
 module_param (major, int, 0444);
 module_param (minor, int, 0444);
@@ -59,6 +62,9 @@ static ssize_t device_read(struct file *file, char __user *buffer, size_t length
     if (*offset >= message_size)
         return 0; // EOF
 
+	// offset: the file offset
+	// length: the length that user want to read
+	// check if the left content has the <length> bytes
     if (message_size - *offset < length) {
 	read_size = message_size - *offset;
     } else {
@@ -94,6 +100,43 @@ static ssize_t device_write(struct file *file, const char __user *buffer, size_t
     return length;
 }
 
+// #define _IOC(dir,type,nr,size)
+#define CMD_TEST0  _IO('l',1)
+#define CMD_TEST2  _IO('l',3)
+#define CMD_TEST3  _IOR('l',5, int)
+#define CMD_TEST4  _IOW('l',7, int)
+
+long test_ioctl (struct file * pFile, unsigned int cmd, unsigned long value);
+long test_ioctl (struct file * pFile, unsigned int cmd, unsigned long value)
+{
+	unsigned long* pValue = (unsigned long*)value;
+	unsigned long tmp = 88;
+	switch (cmd) {
+		case CMD_TEST0:
+			printk("this is ioctl: test0\n");
+			break;
+		case CMD_TEST2:
+			printk("this is ioctl: test2\n");
+			break;
+		case CMD_TEST3:
+			// when reading, user need to pass address to get data and use copy_to_user must be used
+			printk("this is ioctl: test3\n");
+            if (copy_to_user(pValue, &tmp, sizeof(*pValue)))
+                return -EFAULT;
+			break;
+		case CMD_TEST4:
+			// when writting, if user pass value not address, we can use the value directly
+			// If user pass the address of data, copy_from_user must be used
+			printk("this is ioctl: test4, write to device %ld\n", value);
+			break;
+		default:
+			printk("this is ioctl: default\n");
+			break;
+	}
+
+	return 0;
+}
+
 // 文件操作结构体
 static struct file_operations fops = {
     .owner = THIS_MODULE,
@@ -101,6 +144,7 @@ static struct file_operations fops = {
     .release = device_release,
     .read = device_read,
     .write = device_write,
+	.unlocked_ioctl = test_ioctl,
 };
 
 // 模块初始化函数
@@ -200,6 +244,7 @@ static int testprobe (struct platform_device * pDev)
 
 	printk("name of device node: %s\n",pDev->dev.of_node->name);
 
+	// find device node by path
 	pNode = of_find_node_by_path("/test");
 
 	if (pNode == NULL) {
@@ -208,7 +253,7 @@ static int testprobe (struct platform_device * pDev)
 	printk("name of device node: %s\n", pNode->name);
 	printk("full name of device node: %s\n", pNode->full_name);
 
-	// Get device node from platform_device
+	// Get device node from platform_device which matches the device tree
 	pNode = pDev->dev.of_node;
 
 	// get compatible property from device node
@@ -305,7 +350,7 @@ struct platform_driver pDriver =  {
         .owner = THIS_MODULE,
 		.of_match_table = of_match_table_test,
     },
-	.id_table = &test_id_table
+	.id_table = &test_id_table,
 };
 
 static int platform_driver_init(void)
@@ -337,6 +382,24 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Your Name");
 MODULE_DESCRIPTION("A simple platform bus driver");
 
+/* module_platform_driver() - Helper macro for drivers that don't do
+ * anything special in module init/exit.  This eliminates a lot of
+ * boilerplate.  Each module may only use this macro once, and
+ * calling it replaces module_init() and module_exit()
+ */
+//#define module_platform_driver(__platform_driver)
 
+/*
+example:
+static struct platform_driver mtk_btcvsd_snd_driver = {
+	.driver = {
+		.name = "mtk-btcvsd-snd",
+		.of_match_table = mtk_btcvsd_snd_dt_match,
+	},
+	.probe = mtk_btcvsd_snd_probe,
+	.remove = mtk_btcvsd_snd_remove,
+};
 
+module_platform_driver(mtk_btcvsd_snd_driver);
+*/
 
