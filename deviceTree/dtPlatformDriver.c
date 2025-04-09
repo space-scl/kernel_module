@@ -11,6 +11,9 @@
 #include <linux/fs.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
+#include <linux/interrupt.h>
+#include <linux/irq.h>
+#include <linux/irqdesc.h>
 
 
 // Register character device in probe routine for platform bus driver
@@ -18,6 +21,8 @@
 #define DEVICE_NAME "mydevice"
 #define CLASS_NAME "myclass"
 
+static void __iomem *reg_base;
+static int irq_num;
 
 static struct class *myclass = NULL;
 static struct cdev my_cdev;
@@ -31,6 +36,8 @@ static int minor;
 
 static int array[10];
 static int count;
+static int trigger_irq = 0;
+module_param(trigger_irq, int, 0644);
 
 // pass parameters when insmod modules
 // insmod <module_name> array=1,2,3
@@ -94,9 +101,14 @@ static ssize_t device_write(struct file *file, const char __user *buffer, size_t
     }
 
     printk(KERN_INFO "Received data from user: %s\n", kernel_buffer);
+    printk(KERN_INFO "the irq number is : %d\n", irq_num);
+	if (kernel_buffer[0]==  '1') {
+        generic_handle_irq(irq_num);
+    }
 
     // 释放内核缓冲区
     kfree(kernel_buffer);
+
     return length;
 }
 
@@ -216,6 +228,7 @@ static int __init mydevice_init(void) {
 // 模块退出函数
 static void __exit mydevice_exit(void) {
     dev_t dev = MKDEV(major, minor);
+    free_irq(irq_num, NULL);
 
     // 销毁设备文件
     device_destroy(myclass, dev);
@@ -232,15 +245,42 @@ static void __exit mydevice_exit(void) {
 
 #endif
 
+static irqreturn_t test_irq_handler(int irq, void *dev_id)
+{
+    printk(KERN_INFO "Interrupt triggered! IRQ: %d\n", irq);
+    return IRQ_HANDLED;
+}
+
 static struct device_node * pNode = NULL;
 static struct property * pProperty = NULL;
 static int len;
 static u32 out_values[2] = {0};
 const char* str;
 
+
 static int testprobe (struct platform_device * pDev)
 {
-	int ret;
+    struct resource *res;
+    int ret;
+
+    // 映射寄存器
+    res = platform_get_resource(pDev, IORESOURCE_MEM, 0);
+    reg_base = devm_ioremap_resource(&pDev->dev, res);
+    if (IS_ERR(reg_base))
+        return PTR_ERR(reg_base);
+
+    // 获取中断号
+    irq_num = platform_get_irq(pDev, 0);
+    if (irq_num < 0)
+        return irq_num;
+
+    // 注册中断处理函数
+    ret = request_irq(irq_num, test_irq_handler, IRQF_TRIGGER_HIGH, DEVICE_NAME, NULL);
+    if (ret)
+        return ret;
+
+
+    printk(KERN_INFO "Device ready, IRQ: %d, Reg: 0x%px\n", irq_num, reg_base);
 
 	printk("name of device node: %s\n",pDev->dev.of_node->name);
 
@@ -289,6 +329,8 @@ static int testprobe (struct platform_device * pDev)
 //			       0x18 0x8   // index 1
 //			  	  >;
 	virtual_gpio_dr = of_iomap(pNode, 1); // map at 0x18 with 0x8 bytes
+	return 0;
+
 #if 0
     static int __iomem * virMap;
 
@@ -313,7 +355,6 @@ err_region:
 	return -EBUSY;
 #endif
 
-	return 0;
 
 }
 
