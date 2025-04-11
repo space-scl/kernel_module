@@ -21,6 +21,8 @@
 #define DEVICE_NAME "mydevice"
 #define CLASS_NAME "myclass"
 
+static struct tasklet_struct test_tasklet;
+
 static void __iomem *reg_base;
 static int irq_num;
 
@@ -103,7 +105,11 @@ static ssize_t device_write(struct file *file, const char __user *buffer, size_t
     printk(KERN_INFO "Received data from user: %s\n", kernel_buffer);
     printk(KERN_INFO "the irq number is : %d\n", irq_num);
 	if (kernel_buffer[0]==  '1') {
+        // 注册中断处理函数
+	    unsigned long flags;  // 它不会模拟硬件中断上下文的特性（如自动关闭中断、栈切换等）,需要手动关中断和恢复中断
+        local_irq_save(flags);  // 保存并禁用中断
         generic_handle_irq(irq_num);
+	    local_irq_restore(flags); // 恢复中断状态
     }
 
     // 释放内核缓冲区
@@ -245,9 +251,22 @@ static void __exit mydevice_exit(void) {
 
 #endif
 
+void taskletFunc(unsigned long data);
+void taskletFunc(unsigned long data)
+{
+	int i;
+
+	for (i = 0; i < data; i++) {
+        printk(KERN_INFO "tasklet triggered: %d\n", i);
+	}
+}
+
 static irqreturn_t test_irq_handler(int irq, void *dev_id)
 {
-    printk(KERN_INFO "Interrupt triggered! IRQ: %d\n", irq);
+    printk(KERN_INFO "Interrupt triggered! start IRQ: %d\n", irq);
+    tasklet_schedule (&test_tasklet);
+    printk(KERN_INFO "Interrupt triggered! end IRQ: %d\n", irq);
+	printk(KERN_INFO "Interrupts disabled? %d\n", irqs_disabled()); // If interrupt is enalbed, the routine will return 0
     return IRQ_HANDLED;
 }
 
@@ -274,15 +293,17 @@ static int testprobe (struct platform_device * pDev)
     if (irq_num < 0)
         return irq_num;
 
-    // 注册中断处理函数
     ret = request_irq(irq_num, test_irq_handler, IRQF_TRIGGER_HIGH, DEVICE_NAME, NULL);
-    if (ret)
+    if (ret) {
         return ret;
+	}
 
 
     printk(KERN_INFO "Device ready, IRQ: %d, Reg: 0x%px\n", irq_num, reg_base);
 
 	printk("name of device node: %s\n",pDev->dev.of_node->name);
+
+	tasklet_init(&test_tasklet, taskletFunc, 100);
 
 	// find device node by path
 	pNode = of_find_node_by_path("/test");
@@ -362,6 +383,7 @@ err_region:
 static void testremove (struct platform_device *pDev)
 {
 	mydevice_exit();
+	tasklet_kill (&test_tasklet);
     printk("Remove the device in platform driver\n");
 	return;
 }
