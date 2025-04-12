@@ -15,15 +15,16 @@
 #include <linux/irq.h>
 #include <linux/irqdesc.h>
 
-
 #include <linux/wait.h>
 #include <linux/sched.h>
+#include <linux/timer.h>
 
 
 // Register character device in probe routine for platform bus driver
 #if 1
 #define DEVICE_NAME "mydevice"
 #define CLASS_NAME "myclass"
+
 
 // Declare and initialze the variable of wait queue, test_wq
 DECLARE_WAIT_QUEUE_HEAD(test_wq);
@@ -41,6 +42,7 @@ static struct cdev my_cdev;
 
 static int parameter;
 static int num;
+static int timer_on;
 
 // user can specify device number when installing module
 // if user does not specify device number explicitly, it will be allocated dynamically
@@ -57,9 +59,20 @@ module_param(trigger_irq, int, 0644);
 // cat /sys/module/dtPlatformDriver/parameters/array
 module_param (parameter, int, 0444);
 module_param (num, int, 0444);
+module_param (timer_on, int, 0444);
 module_param (major, int, 0444);
 module_param (minor, int, 0444);
 module_param_array (array, int, &count, 0444);
+
+void timerFunc(struct timer_list * timer);
+
+DEFINE_TIMER(test_timer, timerFunc);
+void timerFunc(struct timer_list * timer)
+{
+    printk(KERN_INFO "timer trigger\n");
+	if (timer_on == 1)
+	    mod_timer (timer, jiffies + 1 * HZ);
+}
 
 // 设备文件的打开操作
 static int device_open(struct inode *inode, struct file *file) {
@@ -340,6 +353,9 @@ static int testprobe (struct platform_device * pDev)
 	INIT_WORK(&test_work, workqueueFunc);
 	atomic_long_set(&test_work.data, num);
 
+	test_timer.expires = jiffies + 1 * HZ;
+	add_timer (&test_timer);
+
 	// find device node by path
 	pNode = of_find_node_by_path("/test");
 
@@ -468,6 +484,7 @@ static int platform_driver_init(void)
 static void platform_driver_exit(void)
 {
 	platform_driver_unregister(&pDriver);
+	del_timer (&test_timer);
 	return;
 }
 
