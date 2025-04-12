@@ -31,6 +31,7 @@ static int wq_condition = 0;
 static int test_value = 0;
 
 static struct tasklet_struct test_tasklet;
+static struct work_struct   test_work;
 
 static void __iomem *reg_base;
 static int irq_num;
@@ -39,6 +40,7 @@ static struct class *myclass = NULL;
 static struct cdev my_cdev;
 
 static int parameter;
+static int num;
 
 // user can specify device number when installing module
 // if user does not specify device number explicitly, it will be allocated dynamically
@@ -54,6 +56,7 @@ module_param(trigger_irq, int, 0644);
 // insmod <module_name> array=1,2,3
 // cat /sys/module/dtPlatformDriver/parameters/array
 module_param (parameter, int, 0444);
+module_param (num, int, 0444);
 module_param (major, int, 0444);
 module_param (minor, int, 0444);
 module_param_array (array, int, &count, 0444);
@@ -276,11 +279,22 @@ void taskletFunc(unsigned long data)
 	}
 }
 
+void workqueueFunc(struct work_struct *work);
+void workqueueFunc(struct work_struct *work)
+{
+	//long int j = atomic_long_read(&work->data);
+	for (int i = 0; i < 10; i++) {
+        printk(KERN_INFO "work queue triggered: %d\n", i);
+	}
+
+}
+
 static irqreturn_t test_irq_handler(int irq, void *dev_id)
 {
     printk(KERN_INFO "Interrupt triggered! start IRQ: %d\n", irq);
 	test_value = test_value ^ 1;
     tasklet_schedule (&test_tasklet);
+	schedule_work(&test_work);
     printk(KERN_INFO "Interrupt triggered! end IRQ: %d\n", irq);
 	printk(KERN_INFO "Interrupts disabled? %d\n", irqs_disabled()); // If interrupt is enalbed, the routine will return 0
 	// set condition to 1 to unblock wait queue
@@ -322,7 +336,9 @@ static int testprobe (struct platform_device * pDev)
 
 	printk("name of device node: %s\n",pDev->dev.of_node->name);
 
-	tasklet_init(&test_tasklet, taskletFunc, 100);
+	tasklet_init(&test_tasklet, taskletFunc, 10);
+	INIT_WORK(&test_work, workqueueFunc);
+	atomic_long_set(&test_work.data, num);
 
 	// find device node by path
 	pNode = of_find_node_by_path("/test");
