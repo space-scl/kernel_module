@@ -66,6 +66,17 @@ int main() {
 		return -1;
 	}
 
+	while (1) {
+    	printf("User is reading \n");
+    	ret = read(fd, buffer, 1);
+    	if (ret < 0) {
+    	    perror("Failed to read from device");
+    	    close(fd);
+    	    return -1;
+    	}
+    	printf("Data from device: %d\n", buffer[0]);
+	}
+
     // 关闭设备文件
     close(fd);
     return 0;

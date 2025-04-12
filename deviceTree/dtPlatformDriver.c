@@ -16,10 +16,19 @@
 #include <linux/irqdesc.h>
 
 
+#include <linux/wait.h>
+#include <linux/sched.h>
+
+
 // Register character device in probe routine for platform bus driver
 #if 1
 #define DEVICE_NAME "mydevice"
 #define CLASS_NAME "myclass"
+
+// Declare and initialze the variable of wait queue, test_wq
+DECLARE_WAIT_QUEUE_HEAD(test_wq);
+static int wq_condition = 0;
+static int test_value = 0;
 
 static struct tasklet_struct test_tasklet;
 
@@ -64,12 +73,18 @@ static int device_release(struct inode *inode, struct file *file) {
 // 设备文件的读操作
 static ssize_t device_read(struct file *file, char __user *buffer, size_t length, loff_t *offset) {
     char *message = "Hello from the kernel!\n";
-    printk(KERN_INFO "User want %zu chars\n", length);
+    //printk(KERN_INFO "User want %zu chars\n", length);
     int message_size = strlen(message);
     int read_size = 0;
 
-    if (*offset >= message_size)
+    if (*offset >= message_size) {
+		wait_event_interruptible(test_wq, wq_condition);
+    	if (copy_to_user(buffer, &test_value, 1))
+    	    return -EFAULT;
+		// set condition to 0 to block wait queue
+        wq_condition = 0;
         return 0; // EOF
+	}
 
 	// offset: the file offset
 	// length: the length that user want to read
@@ -254,7 +269,7 @@ static void __exit mydevice_exit(void) {
 void taskletFunc(unsigned long data);
 void taskletFunc(unsigned long data)
 {
-	int i;
+	int i=0xffffff;
 
 	for (i = 0; i < data; i++) {
         printk(KERN_INFO "tasklet triggered: %d\n", i);
@@ -264,9 +279,13 @@ void taskletFunc(unsigned long data)
 static irqreturn_t test_irq_handler(int irq, void *dev_id)
 {
     printk(KERN_INFO "Interrupt triggered! start IRQ: %d\n", irq);
+	test_value = test_value ^ 1;
     tasklet_schedule (&test_tasklet);
     printk(KERN_INFO "Interrupt triggered! end IRQ: %d\n", irq);
 	printk(KERN_INFO "Interrupts disabled? %d\n", irqs_disabled()); // If interrupt is enalbed, the routine will return 0
+	// set condition to 1 to unblock wait queue
+    wq_condition = 1;
+	wake_up(&test_wq);
     return IRQ_HANDLED;
 }
 
