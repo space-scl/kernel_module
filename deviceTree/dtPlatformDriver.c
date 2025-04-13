@@ -54,6 +54,9 @@ static int count;
 static int trigger_irq = 0;
 module_param(trigger_irq, int, 0644);
 
+// to debounce of key
+static struct timer_list test_key;
+
 // pass parameters when insmod modules
 // insmod <module_name> array=1,2,3
 // cat /sys/module/dtPlatformDriver/parameters/array
@@ -72,6 +75,18 @@ void timerFunc(struct timer_list * timer)
     printk(KERN_INFO "timer trigger\n");
 	if (timer_on == 1)
 	    mod_timer (timer, jiffies + 1 * HZ);
+}
+
+void keyTimerFunc (struct timer_list* timer);
+void keyTimerFunc (struct timer_list* timer)
+{
+    // Check if the key is pressed and do further process
+    bool pressed;
+	pressed = true;
+
+	if (pressed) {
+		printk("The key is truely pressed\n");
+	}
 }
 
 // 设备文件的打开操作
@@ -313,6 +328,12 @@ static irqreturn_t test_irq_handler(int irq, void *dev_id)
 	// set condition to 1 to unblock wait queue
     wq_condition = 1;
 	wake_up(&test_wq);
+
+	// To debounce the key, we need to set a timer for 20 milliseconds
+	// delete the previoud timer to avoid reentrying
+	del_timer (&test_key);
+	// reload timer with 20 milliseconds delay
+	mod_timer (&test_key, jiffies + msecs_to_jiffies(20));
     return IRQ_HANDLED;
 }
 
@@ -355,6 +376,7 @@ static int testprobe (struct platform_device * pDev)
 
 	test_timer.expires = jiffies + 1 * HZ;
 	add_timer (&test_timer);
+	timer_setup (&test_key, keyTimerFunc, 0);
 
 	// find device node by path
 	pNode = of_find_node_by_path("/test");
@@ -484,7 +506,13 @@ static int platform_driver_init(void)
 static void platform_driver_exit(void)
 {
 	platform_driver_unregister(&pDriver);
+	// It do not sleep and delete timer from kenel but callback maybe is running.
+	// It can be invoked during the context of interrupt
 	del_timer (&test_timer);
+
+	// It ensures callback is finished on other cpus. So, it can sleep.
+	// It can not be invoked during the context of interrupt
+	del_timer_sync (&test_key);
 	return;
 }
 
