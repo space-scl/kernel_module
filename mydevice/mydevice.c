@@ -182,3 +182,4 @@ module_exit(mydevice_exit);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Your Name");
 MODULE_DESCRIPTION("A simple character device driver");
+

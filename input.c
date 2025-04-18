@@ -11,7 +11,8 @@ int main()
 	int    fd;
 	ssize_t  size;
 
-	fd = open("/dev/input/event1", O_RDWR);
+	//fd = open("/dev/input/event1", O_RDWR); // host machine
+	fd = open("/dev/input/event2", O_RDWR); // qemu emulator
 
 	if (fd <= 0) {
 		printf("Fail to open device file\n");

@@ -19,6 +19,10 @@
 #include <linux/sched.h>
 #include <linux/timer.h>
 
+#include <linux/input.h>
+
+struct input_dev *testInput;
+
 
 // Register character device in probe routine for platform bus driver
 #if 1
@@ -82,9 +86,12 @@ void keyTimerFunc (struct timer_list* timer)
 {
     // Check if the key is pressed and do further process
     bool pressed;
+	int value = 1;
 	pressed = true;
 
 	if (pressed) {
+		input_report_key(testInput, KEY_1, value);
+		input_sync(testInput);
 		printk("The key is truely pressed\n");
 	}
 }
@@ -365,6 +372,21 @@ static int testprobe (struct platform_device * pDev)
         return ret;
 	}
 
+	// allocate input device
+    testInput = input_allocate_device();
+	if (testInput == NULL) {
+		printk("Fail to allocate input device\n");
+	}
+
+	testInput->name = "test_input_dev";
+	__set_bit(EV_KEY, testInput->evbit); // this device supports key event
+	__set_bit(KEY_1, testInput->keybit);
+
+	ret = input_register_device(testInput);
+	if (ret < 0) {
+		printk("Fail to register input device\n");
+		goto error_input_register;
+	}
 
     printk(KERN_INFO "Device ready, IRQ: %d, Reg: 0x%px\n", irq_num, reg_base);
 
@@ -425,6 +447,9 @@ static int testprobe (struct platform_device * pDev)
 	virtual_gpio_dr = of_iomap(pNode, 1); // map at 0x18 with 0x8 bytes
 	return 0;
 
+error_input_register:
+	input_unregister_device(testInput);
+	return -1;
 #if 0
     static int __iomem * virMap;
 
@@ -457,6 +482,7 @@ static void testremove (struct platform_device *pDev)
 {
 	mydevice_exit();
 	tasklet_kill (&test_tasklet);
+	input_unregister_device(testInput);
     printk("Remove the device in platform driver\n");
 	return;
 }
