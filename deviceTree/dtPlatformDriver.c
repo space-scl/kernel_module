@@ -21,6 +21,17 @@
 
 #include <linux/input.h>
 
+#include <linux/i2c.h>
+
+struct i2c_adapter *i2c_ada;
+struct i2c_client  *i2c_client;
+
+struct i2c_board_info eeprom_info[] = {
+	// each entry is i2c slave device
+	{I2C_BOARD_INFO("eeprom_test", 0x51)},
+	{}
+};
+
 struct input_dev *testInput;
 
 
@@ -519,6 +530,19 @@ static int platform_driver_init(void)
 {
 	int ret;
 
+	// get i2c bus, eeprom is the slave device of i2c-0
+	i2c_ada = i2c_get_adapter(0);
+	if (i2c_ada == NULL) {
+		printk("Fail to get i2c bus 0\n");
+		return -1;
+	}
+
+	// i2c_client point to eeprom device
+	i2c_client = i2c_new_client_device(i2c_ada, eeprom_info);
+	// release i2c adapter
+	i2c_put_adapter(i2c_ada);
+
+
 	ret = platform_driver_register(&pDriver);
 	if (ret != 0) {
 	    printk("Fail to register platform driver\n");
@@ -529,8 +553,10 @@ static int platform_driver_init(void)
 
 }
 
+
 static void platform_driver_exit(void)
 {
+	i2c_unregister_device(i2c_client);
 	platform_driver_unregister(&pDriver);
 	// It do not sleep and delete timer from kenel but callback maybe is running.
 	// It can be invoked during the context of interrupt
