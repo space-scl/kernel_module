@@ -23,6 +23,99 @@
 
 #include <linux/i2c.h>
 
+static int __init mydevice_init(void);
+static struct i2c_client  *i2cClient;
+
+
+static int i2cWrite (u8 reg, u8 *data, u8 len)
+{
+	u8 buff[256];
+
+	struct i2c_msg msgs[] = {
+		[0] = {
+			.addr = i2cClient->addr,
+			.flags = 0, // write
+			.len = len + 1,
+			.buf = buff
+		},
+	};
+
+	buff[0] = reg;
+	memcpy(&buff[1], data, len);
+
+	i2c_transfer(i2cClient->adapter, msgs, 1);
+
+	return 0;
+}
+
+
+static int i2cRead(u8 reg)
+{
+	u8 data;
+
+	struct i2c_msg msgs[] = {
+		[0] = {
+			.addr = i2cClient->addr,
+			.flags = 0, // write
+			.len = sizeof(reg),
+			.buf = &reg
+		},
+
+		[1] = {
+			.addr = i2cClient->addr,
+			.flags = 1, // read
+			.len = sizeof(data),
+			.buf = &data
+		},
+	};
+
+	i2c_transfer(i2cClient->adapter, msgs, 2);
+
+	return data;
+}
+
+static struct of_device_id  testI2cTable[] = {
+    {.compatible = "microchip,24c02"},
+	{}
+};
+
+const struct i2c_device_id idI2c[] = {
+	{"xxx", 0}
+};
+
+int probeI2c (struct i2c_client *client)
+{
+	i2cClient = client;
+
+	printk("probe i2c driver\n");
+	u8 data = 12;
+	//i2cWrite(0x80, &data, 1);
+
+	int ret;
+	ret =i2cRead(0x1);
+	printk("i2c driver read and write successfully: %x\n", ret);
+
+
+	return 0;
+}
+
+void removeI2c (struct i2c_client *client)
+{
+
+}
+
+static struct i2c_driver  testI2c = {
+	.driver = {
+		.owner = THIS_MODULE,
+		.name = "test_i2c",
+		.of_match_table = testI2cTable,
+	},
+	.probe = probeI2c,
+	.remove = removeI2c,
+	.id_table = idI2c
+};
+
+#if 0
 struct i2c_adapter *i2c_ada;
 struct i2c_client  *i2c_client;
 
@@ -31,6 +124,7 @@ struct i2c_board_info eeprom_info[] = {
 	{I2C_BOARD_INFO("eeprom_test", 0x51)},
 	{}
 };
+#endif
 
 struct input_dev *testInput;
 
@@ -530,6 +624,7 @@ static int platform_driver_init(void)
 {
 	int ret;
 
+#if 0 // Disable i2c device creation
 	// get i2c bus, eeprom is the slave device of i2c-0
 	i2c_ada = i2c_get_adapter(0);
 	if (i2c_ada == NULL) {
@@ -541,6 +636,7 @@ static int platform_driver_init(void)
 	i2c_client = i2c_new_client_device(i2c_ada, eeprom_info);
 	// release i2c adapter
 	i2c_put_adapter(i2c_ada);
+#endif
 
 
 	ret = platform_driver_register(&pDriver);
@@ -549,6 +645,13 @@ static int platform_driver_init(void)
 		return -1;
 	}
 	printk("register platform driver\n");
+
+	ret = i2c_add_driver(&testI2c);
+	if (ret != 0) {
+	    printk("Fail to register i2c driver\n");
+		return -1;
+	}
+	printk("register i2c driver\n");
 	return 0;
 
 }
@@ -556,7 +659,8 @@ static int platform_driver_init(void)
 
 static void platform_driver_exit(void)
 {
-	i2c_unregister_device(i2c_client);
+	//i2c_unregister_device(i2c_client);
+	i2c_del_driver(&testI2c);
 	platform_driver_unregister(&pDriver);
 	// It do not sleep and delete timer from kenel but callback maybe is running.
 	// It can be invoked during the context of interrupt
