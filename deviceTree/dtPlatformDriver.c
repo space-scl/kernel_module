@@ -22,6 +22,7 @@
 #include <linux/input.h>
 
 #include <linux/i2c.h>
+#include <linux/i2c-dev.h>
 
 static int __init mydevice_init(void);
 static struct i2c_client  *i2cClient;
@@ -48,7 +49,6 @@ static int i2cWrite (u8 reg, u8 *data, u8 len)
 	return 0;
 }
 
-
 static int i2cRead(u8 reg)
 {
 	u8 data;
@@ -68,6 +68,7 @@ static int i2cRead(u8 reg)
 			.buf = &data
 		},
 	};
+	printk("the slave address is %x\n", i2cClient->addr);
 
 	i2c_transfer(i2cClient->adapter, msgs, 2);
 
@@ -88,11 +89,15 @@ int probeI2c (struct i2c_client *client)
 	i2cClient = client;
 
 	printk("probe i2c driver\n");
-	u8 data = 12;
-	//i2cWrite(0x80, &data, 1);
+	u8 data = 50;
+	i2cWrite(0x2, &data, 1);
+
+	data = 0x50;
+	i2cWrite(0x2, &data, 1);
 
 	int ret;
-	ret =i2cRead(0x1);
+	ret =i2cRead(0x2);
+	printk("i2c slave address is %x\n", client->addr);
 	printk("i2c driver read and write successfully: %x\n", ret);
 
 
@@ -287,6 +292,8 @@ long test_ioctl (struct file * pFile, unsigned int cmd, unsigned long value)
 {
 	unsigned long* pValue = (unsigned long*)value;
 	unsigned long tmp = 88;
+	struct i2c_rdwr_ioctl_data  *i2c_read_dev;
+
 	switch (cmd) {
 		case CMD_TEST0:
 			printk("this is ioctl: test0\n");
@@ -305,6 +312,9 @@ long test_ioctl (struct file * pFile, unsigned int cmd, unsigned long value)
 			// If user pass the address of data, copy_from_user must be used
 			printk("this is ioctl: test4, write to device %ld\n", value);
 			break;
+		case I2C_RDWR:
+			i2c_read_dev = (struct i2c_rdwr_ioctl_data *)pValue;
+
 		default:
 			printk("this is ioctl: default\n");
 			break;
