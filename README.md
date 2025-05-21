@@ -1,7 +1,8 @@
 # Kernel Module Drivers :computer:
 
-![Kernel Modules Diagram](https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Linux_kernel_ubiquity.svg/1200px-Linux_kernel_ubiquity.svg.png)
-*Linux Kernel Modules Concept*
+![Project Banner](./Linux_kernel_diagram.svg.png)
+
+*Image source: [Linux kernel diagram.svg](https://commons.wikimedia.org/wiki/File:Linux_kernel_diagram.svg)*
 
 This repository contains Linux kernel module drivers for various hardware interfaces. For setting up the complete QEMU and Linux development environment, please visit our companion project:
 [qemu_mbr_boot](https://github.com/space-scl/qemu_mbr_boot) :arrow_upper_right:
