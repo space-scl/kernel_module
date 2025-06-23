@@ -267,6 +267,7 @@ static ssize_t device_write(struct file *file, const char __user *buffer, size_t
 
     printk(KERN_INFO "Received data from user: %s\n", kernel_buffer);
     printk(KERN_INFO "the irq number is : %d\n", irq_num);
+	printk(KERN_INFO "Before real interrupt. Interrupts disabled? %d\n", irqs_disabled()); // If interrupt is enalbed, the routine will return 0
 	if (kernel_buffer[0]==  '1') {
         // 注册中断处理函数
 	    unsigned long flags;  // 它不会模拟硬件中断上下文的特性（如自动关闭中断、栈切换等）,需要手动关中断和恢复中断
